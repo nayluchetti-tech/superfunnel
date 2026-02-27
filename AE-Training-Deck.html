@@ -1,0 +1,1602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AE Training: After the Close — SuperFunnel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy:    #0B1E3D;
+    --navy2:   #122340;
+    --navy3:   #1A2E50;
+    --gold:    #F4A940;
+    --gold2:   #FFC96A;
+    --sky:     #38BDF8;
+    --green:   #34D399;
+    --red:     #F87171;
+    --white:   #F0F4FF;
+    --muted:   #7B92B8;
+    --border:  rgba(255,255,255,0.08);
+    --card:    rgba(255,255,255,0.04);
+    --crit:    #EF4444;
+    --mand:    #F59E0B;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: #060F1E;
+    font-family: 'Inter', sans-serif;
+    color: var(--white);
+    overflow: hidden;
+  }
+
+  /* ── DECK CONTAINER ── */
+  .deck {
+    width: 100vw; height: 100vh;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    padding: 4rem 6rem;
+    background: var(--navy);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+  }
+  .slide.active {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  /* ── PROGRESS BAR ── */
+  #progress {
+    position: fixed; top: 0; left: 0; height: 3px;
+    background: var(--gold);
+    transition: width 0.4s ease;
+    z-index: 100;
+  }
+
+  /* ── DOT NAV ── */
+  #dots {
+    position: fixed; bottom: 1.8rem; left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 0.5rem;
+    z-index: 100;
+  }
+  .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    cursor: pointer;
+    transition: background 0.3s, transform 0.3s;
+  }
+  .dot.active {
+    background: var(--gold);
+    transform: scale(1.3);
+  }
+
+  /* ── SLIDE NUMBER ── */
+  #slide-num {
+    position: fixed; bottom: 1.8rem; right: 2rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    z-index: 100;
+  }
+
+  /* ── ARROWS ── */
+  .arrow {
+    position: fixed; top: 50%; transform: translateY(-50%);
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    width: 40px; height: 40px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--muted);
+    font-size: 1rem;
+    transition: background 0.2s, color 0.2s;
+    z-index: 100;
+    user-select: none;
+  }
+  .arrow:hover { background: rgba(255,255,255,0.12); color: var(--white); }
+  #prev { left: 1rem; }
+  #next { right: 1rem; }
+
+  /* ── TYPOGRAPHY ── */
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 0.8rem;
+  }
+  h1 {
+    font-family: 'Sora', sans-serif;
+    font-size: clamp(2.4rem, 5vw, 3.6rem);
+    font-weight: 800;
+    line-height: 1.1;
+    color: var(--white);
+  }
+  h2 {
+    font-family: 'Sora', sans-serif;
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: 1.8rem;
+  }
+  h3 {
+    font-family: 'Sora', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: 0.4rem;
+  }
+  p, li {
+    font-size: 0.9rem;
+    line-height: 1.65;
+    color: var(--muted);
+  }
+  strong { color: var(--white); font-weight: 600; }
+  .gold { color: var(--gold); }
+  .sky { color: var(--sky); }
+  .green { color: var(--green); }
+
+  /* ── SLIDE LAYOUT HELPERS ── */
+  .slide-inner {
+    width: 100%; max-width: 1100px;
+  }
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2.5rem;
+    align-items: start;
+  }
+  .three-col {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.4rem 1.6rem;
+  }
+  .card-accent-gold { border-left: 3px solid var(--gold); }
+  .card-accent-sky { border-left: 3px solid var(--sky); }
+  .card-accent-green { border-left: 3px solid var(--green); }
+  .card-accent-red { border-left: 3px solid var(--red); }
+
+  /* ── PILLS / BADGES ── */
+  .pill {
+    display: inline-flex; align-items: center;
+    padding: 0.25rem 0.7rem;
+    border-radius: 99px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    gap: 0.3rem;
+  }
+  .pill-gold { background: rgba(244,169,64,0.15); color: var(--gold); }
+  .pill-sky  { background: rgba(56,189,248,0.15);  color: var(--sky);  }
+  .pill-green{ background: rgba(52,211,153,0.15);  color: var(--green);}
+  .pill-red  { background: rgba(248,113,113,0.15); color: var(--red);  }
+  .pill-crit { background: rgba(239,68,68,0.15);   color: var(--crit); border: 1px solid rgba(239,68,68,0.3); }
+  .pill-mand { background: rgba(245,158,11,0.15);  color: var(--mand); border: 1px solid rgba(245,158,11,0.3); }
+
+  /* ── CHECKLIST ── */
+  .checklist { list-style: none; }
+  .checklist li {
+    display: flex; align-items: flex-start;
+    gap: 0.7rem;
+    padding: 0.45rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+  }
+  .checklist li:last-child { border-bottom: none; }
+  .check-box {
+    flex-shrink: 0;
+    width: 16px; height: 16px;
+    border: 1.5px solid var(--muted);
+    border-radius: 3px;
+    margin-top: 2px;
+  }
+
+  /* ── DIVIDER ── */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 1.5rem 0;
+  }
+
+  /* ────────────────────────────────────────
+     SLIDE 1 — TITLE
+  ──────────────────────────────────────── */
+  #s1 {
+    background: radial-gradient(ellipse at 60% 40%, #132D5A 0%, #0B1E3D 65%);
+  }
+  #s1 .tagline {
+    font-size: 1.05rem;
+    color: var(--muted);
+    margin-top: 1rem;
+    max-width: 520px;
+  }
+  #s1 .meta-row {
+    display: flex; gap: 1rem; margin-top: 2.5rem; flex-wrap: wrap;
+  }
+  #s1 .globe-wrap {
+    position: absolute; right: 6rem; top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.22;
+  }
+
+  /* ── GLOBE SVG ── */
+  .globe-svg { width: 340px; height: 340px; }
+
+  /* ────────────────────────────────────────
+     SLIDE 2 — WHAT YOU SOLD
+  ──────────────────────────────────────── */
+  .funnel-wrap {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 0;
+  }
+  .funnel-step {
+    display: flex; align-items: center; gap: 1rem;
+    padding: 0.8rem 1.4rem;
+    border-radius: 8px;
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--border);
+    margin-bottom: 4px;
+    position: relative;
+  }
+  .funnel-step .step-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--gold);
+    background: rgba(244,169,64,0.12);
+    border-radius: 4px;
+    padding: 0.2rem 0.45rem;
+    flex-shrink: 0;
+  }
+  .funnel-step .step-text { font-size: 0.85rem; color: var(--white); }
+  .funnel-step .step-sub { font-size: 0.75rem; color: var(--muted); }
+  .funnel-arrow {
+    text-align: center;
+    color: var(--gold);
+    font-size: 1rem;
+    line-height: 1;
+    margin: 1px 0;
+  }
+  .price-banner {
+    background: rgba(244,169,64,0.1);
+    border: 1px solid rgba(244,169,64,0.3);
+    border-radius: 10px;
+    padding: 1.2rem 1.8rem;
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+  .price-banner .price { font-family: 'Sora', sans-serif; font-size: 1.8rem; font-weight: 800; color: var(--gold); }
+  .price-banner .price-sub { font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem; }
+
+  /* ────────────────────────────────────────
+     SLIDE 3 — ROLES HUB & SPOKE
+  ──────────────────────────────────────── */
+  .hub-spoke {
+    position: relative;
+    width: 420px; height: 420px;
+    flex-shrink: 0;
+  }
+  .hub {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    width: 110px; height: 110px;
+    border-radius: 50%;
+    background: rgba(244,169,64,0.15);
+    border: 2px solid var(--gold);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    z-index: 2;
+  }
+  .hub .hub-label {
+    font-family: 'Sora', sans-serif;
+    font-size: 0.85rem; font-weight: 800;
+    color: var(--gold);
+    line-height: 1.2;
+  }
+  .hub .hub-sub {
+    font-size: 0.62rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .spoke-node {
+    position: absolute;
+    width: 120px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.65rem 0.8rem;
+    text-align: center;
+    transform: translate(-50%,-50%);
+    z-index: 2;
+  }
+  .spoke-node .sn-role {
+    font-family: 'Sora', sans-serif;
+    font-size: 0.75rem; font-weight: 700;
+    margin-bottom: 0.2rem;
+  }
+  .spoke-node .sn-owns { font-size: 0.65rem; color: var(--muted); line-height: 1.4; }
+  /* positions: top, right, bottom, left */
+  .spoke-top    { top: 8%;  left: 50%; }
+  .spoke-right  { top: 50%; left: 88%; }
+  .spoke-bottom { top: 92%; left: 50%; }
+  .spoke-left   { top: 50%; left: 12%; }
+
+  .spoke-line {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform-origin: 0 0;
+    height: 1px;
+    background: rgba(255,255,255,0.1);
+    z-index: 1;
+  }
+
+  .qb-rule {
+    background: rgba(244,169,64,0.08);
+    border: 1px solid rgba(244,169,64,0.2);
+    border-radius: 8px;
+    padding: 1rem 1.4rem;
+    font-size: 0.85rem;
+    color: var(--white);
+    line-height: 1.6;
+    margin-top: 1.5rem;
+  }
+
+  /* ────────────────────────────────────────
+     SLIDE 4 — DEAL HANDOFF
+  ──────────────────────────────────────── */
+  .automation-box {
+    background: rgba(52,211,153,0.07);
+    border: 1px solid rgba(52,211,153,0.25);
+    border-radius: 10px;
+    padding: 1.2rem 1.4rem;
+  }
+  .automation-box .auto-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--green);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.8rem;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .automation-box .auto-item {
+    font-size: 0.82rem;
+    color: var(--muted);
+    padding: 0.3rem 0;
+    border-bottom: 1px solid rgba(52,211,153,0.1);
+    display: flex; align-items: flex-start; gap: 0.5rem;
+  }
+  .automation-box .auto-item:last-child { border-bottom: none; }
+  .auto-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); flex-shrink: 0; margin-top: 5px; }
+
+  /* ────────────────────────────────────────
+     SLIDE 5 — PIPELINE FORK
+  ──────────────────────────────────────── */
+  .fork-wrap {
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .fork-top {
+    background: rgba(244,169,64,0.1);
+    border: 1px solid rgba(244,169,64,0.3);
+    border-radius: 10px;
+    padding: 0.9rem 2.4rem;
+    font-family: 'Sora', sans-serif;
+    font-size: 0.95rem; font-weight: 700;
+    color: var(--gold);
+    margin-bottom: 0;
+  }
+  .fork-stem {
+    width: 2px; height: 40px;
+    background: var(--muted);
+    margin: 0 auto;
+  }
+  .fork-branches {
+    display: flex; gap: 5rem; align-items: flex-start; position: relative;
+  }
+  .fork-branch {
+    display: flex; flex-direction: column; align-items: center; gap: 0;
+    width: 200px;
+  }
+  .fork-condition {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    font-size: 0.78rem;
+    color: var(--muted);
+    text-align: center;
+    margin-bottom: 0;
+  }
+  .fork-v { width: 2px; height: 30px; background: var(--muted); }
+  .fork-dest {
+    border-radius: 10px;
+    padding: 1rem 1.2rem;
+    text-align: center;
+    width: 100%;
+  }
+  .fork-dest .fd-name {
+    font-family: 'Sora', sans-serif;
+    font-size: 0.85rem; font-weight: 700;
+  }
+  .fork-dest .fd-sub { font-size: 0.72rem; color: var(--muted); margin-top: 0.3rem; }
+  .fork-dest-blue  { background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.3); }
+  .fork-dest-blue  .fd-name { color: var(--sky); }
+  .fork-dest-gold  { background: rgba(244,169,64,0.08); border: 1px solid rgba(244,169,64,0.3); }
+  .fork-dest-gold  .fd-name { color: var(--gold); }
+
+  .fork-connector {
+    position: absolute;
+    top: 0; left: 50%;
+    width: calc(5rem + 1px);
+    height: 2px;
+    background: var(--muted);
+    transform: translateX(-50%);
+  }
+
+  .after-pilot {
+    display: grid; grid-template-columns: repeat(3,1fr);
+    gap: 1rem; margin-top: 2rem; width: 100%;
+  }
+  .ap-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.8rem 1rem;
+    text-align: center;
+  }
+  .ap-item .ap-label { font-size: 0.75rem; color: var(--muted); }
+  .ap-item .ap-arrow { font-size: 1rem; color: var(--gold); display: block; margin-bottom: 0.2rem; }
+  .ap-item .ap-dest { font-size: 0.78rem; font-weight: 600; color: var(--white); margin-top: 0.3rem; }
+
+  /* ────────────────────────────────────────
+     SLIDE 6 — 90-DAY TIMELINE
+  ──────────────────────────────────────── */
+  .timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+    padding-left: 2rem;
+  }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 0.65rem;
+    top: 0.5rem; bottom: 0.5rem;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--gold), rgba(244,169,64,0.1));
+  }
+  .tl-item {
+    display: flex; align-items: flex-start;
+    gap: 1.2rem;
+    padding: 0.75rem 0;
+    position: relative;
+  }
+  .tl-dot {
+    position: absolute;
+    left: -1.65rem;
+    top: 1.1rem;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--navy3);
+    border: 2px solid var(--muted);
+    flex-shrink: 0;
+  }
+  .tl-dot.crit  { border-color: var(--crit);  background: rgba(239,68,68,0.15);  }
+  .tl-dot.mand  { border-color: var(--mand);  background: rgba(245,158,11,0.15); }
+  .tl-dot.start { border-color: var(--green); background: rgba(52,211,153,0.15); }
+  .tl-day {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--gold);
+    min-width: 70px;
+    margin-top: 1px;
+  }
+  .tl-content { flex: 1; }
+  .tl-name { font-size: 0.9rem; font-weight: 600; color: var(--white); display: flex; align-items: center; gap: 0.5rem; }
+  .tl-sub  { font-size: 0.78rem; color: var(--muted); margin-top: 0.15rem; }
+  .tl-rule-box {
+    background: rgba(244,169,64,0.08);
+    border: 1px solid rgba(244,169,64,0.25);
+    border-radius: 8px;
+    padding: 0.8rem 1.2rem;
+    margin-top: 1.5rem;
+    font-size: 0.85rem;
+    color: var(--gold);
+    text-align: center;
+  }
+
+  /* ────────────────────────────────────────
+     SLIDE 7 — DATA DELIVERABLES
+  ──────────────────────────────────────── */
+  .data-table { width: 100%; border-collapse: separate; border-spacing: 0 6px; }
+  .data-table thead th {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0 1.2rem 0.6rem;
+    text-align: left;
+  }
+  .data-table tbody tr {
+    background: var(--card);
+  }
+  .data-table tbody td {
+    padding: 0.9rem 1.2rem;
+    font-size: 0.82rem;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .data-table tbody td:first-child {
+    border-left: 1px solid var(--border);
+    border-radius: 8px 0 0 8px;
+  }
+  .data-table tbody td:last-child {
+    border-right: 1px solid var(--border);
+    border-radius: 0 8px 8px 0;
+  }
+  .data-table .day-cell {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--gold);
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+  .metrics-list { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+  .metric-tag {
+    background: rgba(56,189,248,0.1);
+    border: 1px solid rgba(56,189,248,0.2);
+    border-radius: 4px;
+    padding: 0.2rem 0.5rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--sky);
+  }
+
+  /* ────────────────────────────────────────
+     SLIDE 8 — AE ACTIONS (6-CARD GRID)
+  ──────────────────────────────────────── */
+  .action-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    width: 100%;
+  }
+  .action-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.1rem 1.3rem;
+  }
+  .action-card .ac-day {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    margin-bottom: 0.3rem;
+    display: flex; align-items: center; gap: 0.4rem;
+  }
+  .action-card .ac-title {
+    font-family: 'Sora', sans-serif;
+    font-size: 0.88rem; font-weight: 700;
+    color: var(--white);
+    margin-bottom: 0.6rem;
+  }
+  .action-card ul { list-style: none; }
+  .action-card ul li {
+    font-size: 0.78rem;
+    color: var(--muted);
+    padding: 0.22rem 0;
+    display: flex; gap: 0.5rem;
+  }
+  .action-card ul li::before {
+    content: '→';
+    color: var(--gold);
+    flex-shrink: 0;
+  }
+  .ac-you { border-top: 3px solid var(--gold); }
+  .ac-aware { border-top: 3px solid var(--muted); }
+  .ac-colead { border-top: 3px solid var(--sky); }
+  .ac-critical { border-top: 3px solid var(--crit); }
+  .ac-mandatory { border-top: 3px solid var(--mand); }
+  .ac-close { border-top: 3px solid var(--green); }
+
+  /* ────────────────────────────────────────
+     SLIDE 9 — PRE-LAUNCH GATES
+  ──────────────────────────────────────── */
+  .gate-grid {
+    display: grid; grid-template-columns: repeat(3,1fr);
+    gap: 1.2rem;
+  }
+  .gate-group {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.2rem 1.3rem;
+  }
+  .gate-group .gg-header {
+    display: flex; align-items: center; gap: 0.5rem;
+    margin-bottom: 0.8rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .gate-group .gg-name {
+    font-family: 'Sora', sans-serif;
+    font-size: 0.82rem; font-weight: 700;
+    color: var(--white);
+  }
+  .gate-group .gg-item {
+    display: flex; align-items: flex-start;
+    gap: 0.5rem;
+    font-size: 0.78rem;
+    color: var(--muted);
+    padding: 0.28rem 0;
+  }
+  .gate-box { width: 14px; height: 14px; border: 1.5px solid var(--muted); border-radius: 2px; flex-shrink: 0; margin-top: 1px; }
+  .warning-bar {
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.25);
+    border-radius: 8px;
+    padding: 0.85rem 1.4rem;
+    margin-top: 1.5rem;
+    font-size: 0.83rem;
+    color: var(--red);
+    text-align: center;
+  }
+
+  /* ────────────────────────────────────────
+     SLIDE 10 — EXPANSION PATH
+  ──────────────────────────────────────── */
+  .tier-ladder {
+    display: flex; flex-direction: column; gap: 0.6rem;
+    margin-top: 0.5rem;
+  }
+  .tier-item {
+    display: flex; align-items: center; gap: 1.2rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.85rem 1.2rem;
+  }
+  .tier-item .tier-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    width: 20px;
+    text-align: center;
+  }
+  .tier-item .tier-name {
+    font-family: 'Sora', sans-serif;
+    font-size: 0.88rem; font-weight: 700;
+    color: var(--white);
+    flex: 1;
+  }
+  .tier-item .tier-price {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--gold);
+  }
+  .tier-pilot { border-left: 3px solid var(--muted); }
+  .tier-starter { border-left: 3px solid var(--sky); }
+  .tier-pro { border-left: 3px solid var(--gold); }
+  .tier-ent { border-left: 3px solid var(--green); }
+
+  .benchmark-box {
+    background: rgba(52,211,153,0.07);
+    border: 1px solid rgba(52,211,153,0.25);
+    border-radius: 10px;
+    padding: 1.2rem 1.4rem;
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+  .benchmark-box .bm-num {
+    font-family: 'Sora', sans-serif;
+    font-size: 1.6rem; font-weight: 800;
+    color: var(--green);
+  }
+  .benchmark-box .bm-label {
+    font-size: 0.75rem; color: var(--muted); margin-top: 0.2rem;
+  }
+
+  .case-study-box {
+    background: rgba(244,169,64,0.06);
+    border: 1px solid rgba(244,169,64,0.2);
+    border-radius: 10px;
+    padding: 1.1rem 1.4rem;
+    margin-top: 1.2rem;
+  }
+  .case-study-box .cs-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--gold);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+  .case-study-box .cs-text {
+    font-size: 0.82rem;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+  .cs-stat {
+    font-family: 'Sora', sans-serif;
+    font-size: 1.1rem; font-weight: 800;
+    color: var(--gold);
+    display: inline;
+  }
+
+  /* ────────────────────────────────────────
+     SLIDE 11 — OPERATING RULES
+  ──────────────────────────────────────── */
+  .rules-list { list-style: none; }
+  .rules-list li {
+    display: flex; align-items: flex-start; gap: 1rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.88rem;
+  }
+  .rules-list li:last-child { border-bottom: none; }
+  .rule-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--gold);
+    background: rgba(244,169,64,0.12);
+    border-radius: 4px;
+    padding: 0.15rem 0.4rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .esc-grid {
+    display: flex; flex-direction: column; gap: 0.6rem;
+  }
+  .esc-item {
+    display: grid; grid-template-columns: 1fr 1px 1fr;
+    align-items: center; gap: 0;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .esc-trigger {
+    padding: 0.7rem 1rem;
+    font-size: 0.8rem; color: var(--muted);
+  }
+  .esc-divider { background: var(--border); height: 100%; }
+  .esc-action {
+    padding: 0.7rem 1rem;
+    font-size: 0.8rem; color: var(--white);
+  }
+
+  /* ────────────────────────────────────────
+     SLIDE 12 — QUICK REFERENCE
+  ──────────────────────────────────────── */
+  .qr-grid {
+    display: grid; grid-template-columns: repeat(2,1fr);
+    gap: 0.8rem;
+  }
+  .qr-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.9rem 1.1rem;
+    display: flex; flex-direction: column; gap: 0.3rem;
+  }
+  .qr-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .qr-value {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--white);
+  }
+  .qr-value.big {
+    font-family: 'Sora', sans-serif;
+    font-size: 1.15rem;
+    color: var(--gold);
+  }
+</style>
+</head>
+<body>
+
+<div class="deck" id="deck">
+
+  <!-- PROGRESS -->
+  <div id="progress"></div>
+
+  <!-- ARROWS -->
+  <div class="arrow" id="prev">&#8592;</div>
+  <div class="arrow" id="next">&#8594;</div>
+
+  <!-- DOTS -->
+  <div id="dots"></div>
+
+  <!-- SLIDE NUM -->
+  <div id="slide-num"></div>
+
+  <!-- ════════════════════════════════════
+       SLIDE 1 — TITLE
+  ═══════════════════════════════════════ -->
+  <section class="slide active" id="s1">
+    <!-- decorative globe -->
+    <div class="globe-wrap">
+      <svg class="globe-svg" viewBox="0 0 340 340" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="170" cy="170" r="160" stroke="#F4A940" stroke-width="1.5" opacity="0.6"/>
+        <circle cx="170" cy="170" r="160" stroke="#F4A940" stroke-width="0.5"/>
+        <!-- latitudes -->
+        <ellipse cx="170" cy="170" rx="160" ry="55"  stroke="#F4A940" stroke-width="0.6" opacity="0.5"/>
+        <ellipse cx="170" cy="170" rx="160" ry="110" stroke="#F4A940" stroke-width="0.6" opacity="0.4"/>
+        <line x1="10"  y1="170" x2="330" y2="170" stroke="#F4A940" stroke-width="0.5" opacity="0.4"/>
+        <!-- longitudes -->
+        <ellipse cx="170" cy="170" rx="55"  ry="160" stroke="#F4A940" stroke-width="0.6" opacity="0.4"/>
+        <ellipse cx="170" cy="170" rx="110" ry="160" stroke="#F4A940" stroke-width="0.6" opacity="0.3"/>
+        <line x1="170" y1="10"   x2="170" y2="330"  stroke="#F4A940" stroke-width="0.5" opacity="0.3"/>
+      </svg>
+    </div>
+
+    <div class="slide-inner" style="max-width:600px;">
+      <div class="eyebrow">SuperFunnel · Sales Enablement</div>
+      <h1>After the Close<br><span class="gold">The 90-Day Playbook</span></h1>
+      <p class="tagline">Everything an AE needs to know from Closed Won to signed expansion contract.</p>
+      <div class="meta-row">
+        <span class="pill pill-gold">AE Training</span>
+        <span class="pill pill-sky">Retention &amp; Expansion</span>
+        <span class="pill pill-green">$15K → $250K</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════
+       SLIDE 2 — WHAT YOU JUST SOLD
+  ═══════════════════════════════════════ -->
+  <section class="slide" id="s2">
+    <div class="slide-inner two-col">
+      <div>
+        <div class="eyebrow">Slide 01 — The Product</div>
+        <h2>What You<br>Just Sold</h2>
+        <div class="price-banner">
+          <div class="price">$5,000 / month</div>
+          <div class="price-sub">3-month paid pilot &nbsp;·&nbsp; $15,000 total</div>
+        </div>
+        <p style="font-size:0.85rem;">A co-branded acquisition funnel on PRAY.COM targeting faith-intent iOS users. The pilot exists to <strong>prove ROI, then scale.</strong></p>
+        <div class="divider"></div>
+        <p style="font-size:0.82rem;color:var(--gold);">Your job doesn't end at close — it starts there.</p>
+      </div>
+      <div>
+        <div class="funnel-wrap">
+          <div class="funnel-step">
+            <span class="step-num">01</span>
+            <div>
+              <div class="step-text">Targeted Ads</div>
+              <div class="step-sub">Faith-intent iOS users via paid acquisition</div>
+            </div>
+          </div>
+          <div class="funnel-arrow">↓</div>
+          <div class="funnel-step">
+            <span class="step-num">02</span>
+            <div>
+              <div class="step-text">First-Party Data Capture</div>
+              <div class="step-sub">Name · Email · Location · Giving intent</div>
+            </div>
+          </div>
+          <div class="funnel-arrow">↓</div>
+          <div class="funnel-step">
+            <span class="step-num">03</span>
+            <div>
+              <div class="step-text">Automated Sequences</div>
+              <div class="step-sub">Discipleship + donor nudge cadences</div>
+            </div>
+          </div>
+          <div class="funnel-arrow">↓</div>
+          <div class="funnel-step">
+            <span class="step-num">04</span>
+            <div>
+              <div class="step-text">Premium Subscribers</div>
+              <div class="step-sub">Revenue split back to the ministry</div>
+            </div>
+          </div>
+          <div class="funnel-arrow">↓</div>
+          <div class="funnel-step" style="border-color:rgba(52,211,153,0.3);background:rgba(52,211,153,0.06);">
+            <span class="step-num" style="background:rgba(52,211,153,0.15);color:var(--green);">05</span>
+            <div>
+              <div class="step-text" style="color:var(--green);">Proven ROI → Scale</div>
+              <div class="step-sub">Pilot converts to annual expansion contract</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════
+       SLIDE 3 — ROLES: QUARTERBACK
+  ═══════════════════════════════════════ -->
+  <section class="slide" id="s3">
+    <div class="slide-inner two-col" style="align-items:center;">
+      <div style="display:flex;justify-content:center;align-items:center;">
+        <div class="hub-spoke">
+          <!-- spoke lines (SVG) -->
+          <svg style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;" viewBox="0 0 420 420">
+            <!-- top -->
+            <line x1="210" y1="210" x2="210" y2="50"  stroke="rgba(255,255,255,0.12)" stroke-width="1.5"/>
+            <!-- right -->
+            <line x1="210" y1="210" x2="370" y2="210" stroke="rgba(255,255,255,0.12)" stroke-width="1.5"/>
+            <!-- bottom -->
+            <line x1="210" y1="210" x2="210" y2="370" stroke="rgba(255,255,255,0.12)" stroke-width="1.5"/>
+            <!-- left -->
+            <line x1="210" y1="210" x2="50"  y2="210" stroke="rgba(255,255,255,0.12)" stroke-width="1.5"/>
+          </svg>
+
+          <!-- HUB -->
+          <div class="hub">
+            <div class="hub-label">AE</div>
+            <div class="hub-sub">Quarterback</div>
+          </div>
+
+          <!-- TOP: Success -->
+          <div class="spoke-node spoke-top" style="border-top:2px solid var(--sky);">
+            <div class="sn-role sky">Success / CSM</div>
+            <div class="sn-owns">Onboarding · Setup · Relationship</div>
+          </div>
+
+          <!-- RIGHT: Product -->
+          <div class="spoke-node spoke-right" style="border-top:2px solid var(--green);">
+            <div class="sn-role green">Product</div>
+            <div class="sn-owns">Campaigns · Optimization · Data</div>
+          </div>
+
+          <!-- BOTTOM: Marketing -->
+          <div class="spoke-node spoke-bottom" style="border-top:2px solid var(--red);">
+            <div class="sn-role" style="color:var(--red);">Marketing</div>
+            <div class="sn-owns">Lead Magnets · Creative Assets</div>
+          </div>
+
+          <!-- LEFT: Client -->
+          <div class="spoke-node spoke-left" style="border-top:2px solid var(--gold);background:rgba(244,169,64,0.06);">
+            <div class="sn-role gold">Ministry</div>
+            <div class="sn-owns">Client — you own this relationship</div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="eyebrow">Slide 02 — Your Role</div>
+        <h2>You're the<br>Quarterback</h2>
+        <div class="card card-accent-gold" style="margin-bottom:1rem;">
+          <h3>What You Own</h3>
+          <ul class="checklist">
+            <li><span class="check-box" style="border-color:var(--gold);"></span>Client relationship end-to-end</li>
+            <li><span class="check-box" style="border-color:var(--gold);"></span>Meeting cadence — every milestone</li>
+            <li><span class="check-box" style="border-color:var(--gold);"></span>Expansion framing + final close</li>
+            <li><span class="check-box" style="border-color:var(--gold);"></span>Client narrative at every touchpoint</li>
+          </ul>
+        </div>
+        <div class="qb-rule">
+          You do <strong>not</strong> run campaigns. You do <strong>not</strong> pull data.<br>
+          You own the <span class="gold">client narrative</span> and drive toward <span class="gold">expansion</span>.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════
+       SLIDE 4 — DEAL HANDOFF
+  ═══════════════════════════════════════ -->
+  <section class="slide" id="s4">
+    <div class="slide-inner two-col">
+      <div>
+        <div class="eyebrow">Slide 03 — Closed Won</div>
+        <h2>Deal Handoff<br>Checklist</h2>
+        <p style="font-size:0.83rem;margin-bottom:1.2rem;">Complete all of this before handing off. Automation only fires when the record is clean.</p>
+        <ul class="checklist">
+          <li><span class="check-box"></span>Deal: Name, Owner, Type, Pipeline, Stage = <strong>Closed Won</strong></li>
+          <li><span class="check-box"></span>Leader Name field populated</li>
+          <li><span class="check-box"></span>Closed Won Reason (dropdown) filled</li>
+          <li><span class="check-box"></span>Short Term Goal + Long Term Goal filled</li>
+          <li><span class="check-box"></span>Parent company: Segment, Domain, Type</li>
+          <li><span class="check-box"></span>At least one contact: email + job title</li>
+          <li><span class="check-box"></span>Line item: Category, Term, Billing Freq, Start/End dates</li>
+          <li><span class="check-box"></span>Signed quote with Product SKU + Quantity</li>
+        </ul>
+      </div>
+      <div>
+        <div class="automation-box">
+          <div class="auto-title">
+            <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="rgba(52,211,153,0.3)" stroke="#34D399" stroke-width="1.2"/><path d="M4 6l1.5 1.5L8 4" stroke="#34D399" stroke-width="1.2" fill="none"/></svg>
+            Then Automation Handles
+          </div>
+          <div class="auto-item"><div class="auto-dot"></div>Creates <strong>Leader record</strong> in HubSpot</div>
+          <div class="auto-item"><div class="auto-dot"></div>Creates <strong>Onboarding Project</strong> (Day 21 target, Day 28 hard limit)</div>
+          <div class="auto-item"><div class="auto-dot"></div>Notifies <strong>Slack</strong> — internal channels alerted</div>
+          <div class="auto-item"><div class="auto-dot"></div>Sends <strong>internal + external</strong> welcome emails</div>
+          <div class="auto-item"><div class="auto-dot"></div>Places leader in correct <strong>pipeline</strong></div>
+        </div>
+        <div class="card" style="margin-top:1.2rem;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.6rem;">Your First Bookings</div>
+          <div style="font-size:0.82rem;color:var(--white);padding:0.3rem 0;border-bottom:1px solid var(--border);">📅 &nbsp;Tech Onboarding (Day 7–10)</div>
+          <div style="font-size:0.82rem;color:var(--white);padding:0.3rem 0;">📅 &nbsp;Day 30 Momentum Review</div>
+        </div>
+        <div style="margin-top:1rem;font-size:0.78rem;color:var(--muted);">Book both of these on Day 0. Non-negotiable.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════
+       SLIDE 5 — PIPELINE
+  ═══════════════════════════════════════ -->
+  <section class="slide" id="s5">
+    <div class="slide-inner">
+      <div class="eyebrow" style="text-align:center;">Slide 04 — HubSpot</div>
+      <h2 style="text-align:center;margin-bottom:2rem;">Which Pipeline Does<br>Your Client Land In?</h2>
+
+      <div class="fork-wrap">
+        <div class="fork-top">Closed Won Deal</div>
+        <div class="fork-stem"></div>
+
+        <div class="fork-branches">
+          <!-- horizontal connector -->
+          <div class="fork-connector"></div>
+
+          <!-- LEFT BRANCH -->
+          <div class="fork-branch">
+            <div class="fork-stem" style="height:20px;"></div>
+            <div class="fork-condition">SuperFunnel only</div>
+            <div class="fork-v"></div>
+            <div class="fork-dest fork-dest-blue">
+              <div class="fd-name">Pilot Pipeline</div>
+              <div class="fd-sub">SF-only clients start here</div>
+            </div>
+          </div>
+
+          <!-- RIGHT BRANCH -->
+          <div class="fork-branch">
+            <div class="fork-stem" style="height:20px;"></div>
+            <div class="fork-condition">SF + any other PRAY product</div>
+            <div class="fork-v"></div>
+            <div class="fork-dest fork-dest-gold">
+              <div class="fd-name">Ministry SaaS Pipeline</div>
+              <div class="fd-sub">Multi-product clients go here</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="after-pilot" style="max-width:700px;margin:2rem auto 0;">
+        <div class="ap-item">
+          <span class="ap-arrow">↺</span>
+          <div class="ap-label">Renews same contract</div>
+          <div class="ap-dest">Stays on Pilot Pipeline</div>
+        </div>
+        <div class="ap-item">
+          <span class="ap-arrow">↑</span>
+          <div class="ap-label">Expands with new products</div>
+          <div class="ap-dest">Moves to Ministry SaaS</div>
+        </div>
+        <div class="ap-item">
+          <span class="ap-arrow">✕</span>
+          <div class="ap-label">Cancels</div>
+          <div class="ap-dest" style="color:var(--red);">Cancellation date + reason · Status = Churned</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════
+       SLIDE 6 — 90-DAY TIMELINE
+  ═══════════════════════════════════════ -->
+  <section class="slide" id="s6">
+    <div class="slide-inner two-col" style="align-items:start;">
+      <div>
+        <div class="eyebrow">Slide 05 — The Map</div>
+        <h2>90-Day<br>Milestone Map</h2>
+        <p style="font-size:0.83rem;margin-bottom:1.5rem;">Every milestone has a meeting, a data deliverable from Product, and a required booking for the <em>next</em> meeting.</p>
+
+        <div class="tl-rule-box">
+          Every meeting ends with the next meeting booked.<br>
+          <strong>No exceptions.</strong>
+        </div>
+      </div>
+      <div>
+        <div class="timeline">
+          <div class="tl-item">
+            <div class="tl-dot start"></div>
+            <div class="tl-day">Day 0</div>
+            <div class="tl-content">
+              <div class="tl-name">Launch Confirmed <span class="pill pill-green" style="font-size:0.6rem;">GO</span></div>
+              <div class="tl-sub">You send; Product gets green light</div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot"></div>
+            <div class="tl-day">Day 7–10</div>
+            <div class="tl-content">
+              <div class="tl-name">Technical Onboarding</div>
+              <div class="tl-sub">Success + Product confirm tracking live</div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot"></div>
+            <div class="tl-day">Day 15</div>
+            <div class="tl-content">
+              <div class="tl-name">Early Signal Check</div>
+              <div class="tl-sub">Success-led; first data snapshot from Product</div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot crit"></div>
+            <div class="tl-day">Day 30</div>
+            <div class="tl-content">
+              <div class="tl-name">Momentum Review <span class="pill pill-crit" style="font-size:0.6rem;">CRITICAL</span></div>
+              <div class="tl-sub">You + Success · Full 30-day report from Product</div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot crit"></div>
+            <div class="tl-day">Day 60</div>
+            <div class="tl-content">
+              <div class="tl-name">Expansion Framing <span class="pill pill-crit" style="font-size:0.6rem;">CRITICAL</span></div>
+              <div class="tl-sub">You lead · 3 scaling scenarios from Product</div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot mand"></div>
+            <div class="tl-day">Day 75</div>
+            <div class="tl-content">
+              <div class="tl-name">Proposal Review <span class="pill pill-mand" style="font-size:0.6rem;">MANDATORY</span></div>
+              <div class="tl-sub">You lead · Full proposal tied to pilot data</div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot mand"></div>
+            <div class="tl-day">Day 90</div>
+            <div class="tl-content">
+              <div class="tl-name">Final Decision <span class="pill pill-mand" style="font-size:0.6rem;">MANDATORY</span></div>
+              <div class="tl-sub">You close · Expansion / Decline / Escalation</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════
+       SLIDE 7 — DATA DELIVERABLES
+  ═══════════════════════════════════════ -->
+  <section class="slide" id="s7">
+    <div class="slide-inner">
+      <div class="eyebrow">Slide 06 — Product Accountability</div>
+      <h2 style="margin-bottom:1.5rem;">What Product Delivers<br>at Each Milestone</h2>
+      <p style="font-size:0.83rem;margin-bottom:1.5rem;">You don't produce this data. <strong>Product does.</strong> Know what to expect so you can hold them accountable and use it in client conversations.</p>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width:90px;">Milestone</th>
+            <th>Data Deliverable</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="day-cell">Day 15</td>
+            <td>
+              <div class="metrics-list">
+                <span class="metric-tag">Impressions</span>
+                <span class="metric-tag">Emails collected</span>
+                <span class="metric-tag">Early subscribers</span>
+                <span class="metric-tag">CPE vs. benchmarks</span>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class="day-cell">Day 30</td>
+            <td>
+              <div class="metrics-list">
+                <span class="metric-tag">Total investment</span>
+                <span class="metric-tag">Impressions</span>
+                <span class="metric-tag">Emails (CPE)</span>
+                <span class="metric-tag">Subscribers (CPS)</span>
+                <span class="metric-tag">Revenue</span>
+                <span class="metric-tag">ELTR</span>
+                <span class="metric-tag">Benchmark comparison</span>
+                <span class="metric-tag">Scaling recommendation</span>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class="day-cell">Day 60</td>
+            <td>
+              <div class="metrics-list">
+                <span class="metric-tag">Full 60-day metrics</span>
+              </div>
+              <div style="margin-top:0.5rem;font-size:0.8rem;color:var(--muted);">+ 3 scaling scenarios:</div>
+              <div class="metrics-list" style="margin-top:0.3rem;">
+                <span class="metric-tag" style="background:rgba(52,211,153,0.1);border-color:rgba(52,211,153,0.3);color:var(--green);">Conservative — $15K</span>
+                <span class="metric-tag" style="background:rgba(244,169,64,0.1);border-color:rgba(244,169,64,0.3);color:var(--gold);">Moderate — $30K</span>
+                <span class="metric-tag" style="background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.3);color:var(--red);">Aggressive — $50K+</span>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class="day-cell">Day 75</td>
+            <td>
+              <div class="metrics-list">
+                <span class="metric-tag">ROI trajectory</span>
+                <span class="metric-tag">Subscriber retention</span>
+                <span class="metric-tag">Revenue per subscriber</span>
+                <span class="metric-tag">Data-backed pricing justification</span>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class="day-cell">Day 90</td>
+            <td>
+              <div class="metrics-list">
+                <span class="metric-tag">Complete pilot summary</span>
+                <span class="metric-tag">Lessons learned</span>
+                <span class="metric-tag">Execution plan (expanded)</span>
+                <span class="metric-tag">Post-mortem (declined)</span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════
+       SLIDE 8 — AE ACTIONS PER STAGE
+  ═══════════════════════════════════════ -->
+  <section class="slide" id="s8">
+    <div class="slide-inner">
+      <div class="eyebrow">Slide 07 — Your Actions</div>
+      <h2 style="margin-bottom:1.5rem;">Your Job at Each Stage</h2>
+      <div class="action-grid">
+        <!-- Day 0 -->
+        <div class="action-card ac-you">
+          <div class="ac-day"><span class="pill pill-green" style="font-size:0.6rem;">YOU SEND</span> Day 0</div>
+          <div class="ac-title">Launch Day</div>
+          <ul>
+            <li>Send launch confirmation to client</li>
+            <li>Book Tech Onboarding (Day 7–10)</li>
+            <li>Book Day 30 Review immediately</li>
+          </ul>
+        </div>
+        <!-- Day 15 -->
+        <div class="action-card ac-aware">
+          <div class="ac-day"><span class="pill pill-sky" style="font-size:0.6rem;">SUCCESS LEADS</span> Day 15</div>
+          <div class="ac-title">Early Signal Check</div>
+          <ul>
+            <li>Be aware; Success leads this call</li>
+            <li>Review Product snapshot beforehand</li>
+            <li>Address friction points fast</li>
+          </ul>
+        </div>
+        <!-- Day 30 -->
+        <div class="action-card ac-colead">
+          <div class="ac-day"><span class="pill pill-sky" style="font-size:0.6rem;">CO-LEAD</span> Day 30</div>
+          <div class="ac-title">Momentum Review</div>
+          <ul>
+            <li>Co-lead with Success</li>
+            <li>Review one-page momentum snapshot</li>
+            <li><strong>Book Day 60 on this call — non-negotiable</strong></li>
+          </ul>
+        </div>
+        <!-- Day 60 -->
+        <div class="action-card ac-critical">
+          <div class="ac-day"><span class="pill pill-crit" style="font-size:0.6rem;">CRITICAL</span> Day 60</div>
+          <div class="ac-title">Expansion Framing</div>
+          <ul>
+            <li>You lead this call</li>
+            <li>Use 60-day report + 3 scaling scenarios</li>
+            <li>Leave with: direction · tier/scope · budget range</li>
+            <li><strong>Book Day 75 — mandatory</strong></li>
+          </ul>
+        </div>
+        <!-- Day 75 -->
+        <div class="action-card ac-mandatory">
+          <div class="ac-day"><span class="pill pill-mand" style="font-size:0.6rem;">MANDATORY</span> Day 75</div>
+          <div class="ac-title">Proposal Review</div>
+          <ul>
+            <li>You lead this call</li>
+            <li>Present full expansion proposal tied to pilot data</li>
+            <li>Handle objections</li>
+            <li><strong>Book Day 90 — mandatory</strong></li>
+          </ul>
+        </div>
+        <!-- Day 90 -->
+        <div class="action-card ac-close">
+          <div class="ac-day"><span class="pill pill-green" style="font-size:0.6rem;">YOU CLOSE</span> Day 90</div>
+          <div class="ac-title">Final Decision</div>
+          <ul>
+            <li>✓ Expansion signed</li>
+            <li>✓ Clear decline (document reason)</li>
+            <li>✓ Executive escalation</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════
+       SLIDE 9 — PRE-LAUNCH GATES
+  ═══════════════════════════════════════ -->
+  <section class="slide" id="s9">
+    <div class="slide-inner">
+      <div class="eyebrow">Slide 08 — Before Day 0</div>
+      <h2 style="margin-bottom:0.5rem;">Pre-Launch Requirements</h2>
+      <p style="font-size:0.83rem;margin-bottom:1.5rem;">Product <strong>cannot start campaign execution</strong> until ALL of the following are complete.</p>
+
+      <div class="gate-grid">
+        <div class="gate-group">
+          <div class="gg-header">
+            <span class="pill pill-sky" style="font-size:0.6rem;">SUCCESS</span>
+            <span class="gg-name">Success / CSM</span>
+          </div>
+          <div class="gg-item"><span class="gate-box"></span>Client onboarded in PRAYStudio</div>
+          <div class="gg-item"><span class="gate-box"></span>Subs+ / donation infrastructure configured</div>
+        </div>
+        <div class="gate-group">
+          <div class="gg-header">
+            <span class="pill pill-red" style="font-size:0.6rem;background:rgba(248,113,113,0.15);color:var(--red);">MARKETING</span>
+            <span class="gg-name">Marketing</span>
+          </div>
+          <div class="gg-item"><span class="gate-box"></span>Lead magnet setup complete</div>
+          <div class="gg-item"><span class="gate-box"></span>Creative assets delivered to Product</div>
+        </div>
+        <div class="gate-group">
+          <div class="gg-header">
+            <span class="pill pill-gold" style="font-size:0.6rem;">AE</span>
+            <span class="gg-name">You (AE)</span>
+          </div>
+          <div class="gg-item"><span class="gate-box"></span>Contract signed</div>
+          <div class="gg-item"><span class="gate-box"></span>First meeting scheduled</div>
+        </div>
+      </div>
+
+      <div class="warning-bar">
+        ⚠ &nbsp;If setup is stalled, <strong>escalate immediately</strong>. Every day late is a day lost in the 90-day window.<br>
+        Target launch: <strong>Day 21</strong> &nbsp;·&nbsp; Hard limit: <strong>Day 28</strong>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════
+       SLIDE 10 — EXPANSION PATH
+  ═══════════════════════════════════════ -->
+  <section class="slide" id="s10">
+    <div class="slide-inner two-col">
+      <div>
+        <div class="eyebrow">Slide 09 — The Goal</div>
+        <h2>Expansion Path</h2>
+
+        <div class="benchmark-box">
+          <div class="bm-num">$100K</div>
+          <div class="bm-label">Donor revenue in first 30 days — the proof point</div>
+        </div>
+
+        <div class="tier-ladder">
+          <div class="tier-item tier-pilot">
+            <span class="tier-num">0</span>
+            <span class="tier-name" style="color:var(--muted);">SuperFunnel Pilot</span>
+            <span class="tier-price">$5K/mo · 3 months</span>
+          </div>
+          <div class="tier-item tier-starter">
+            <span class="tier-num">1</span>
+            <span class="tier-name">Growth Starter</span>
+            <span class="tier-price sky">$2,000/mo</span>
+          </div>
+          <div class="tier-item tier-pro">
+            <span class="tier-num">2</span>
+            <span class="tier-name">Impact Pro</span>
+            <span class="tier-price">$5,000–6,000/mo</span>
+          </div>
+          <div class="tier-item tier-ent">
+            <span class="tier-num">3</span>
+            <span class="tier-name">Kingdom Enterprise</span>
+            <span class="tier-price green">$8,000–10,000+/mo</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="case-study-box">
+          <div class="cs-label">Case Study — Jack Graham</div>
+          <div class="cs-text">
+            <div class="cs-stat">4,000+</div> emails and <div class="cs-stat">50+</div> subscribers in 30 days<br><br>
+            → Scaled to a year-long agreement at <div class="cs-stat">~$250K</div> annually.<br><br>
+            <span style="color:var(--gold);">That's the model. Use it in every expansion conversation.</span>
+          </div>
+        </div>
+
+        <div class="card card-accent-red" style="margin-top:1.2rem;">
+          <h3 style="color:var(--crit);">Don't Miss This Deadline</h3>
+          <p style="font-size:0.83rem;margin-top:0.4rem;">By <strong>Day 60</strong>, expansion direction must be aligned.<br>If you're not having that conversation, you're behind.</p>
+        </div>
+
+        <div class="card" style="margin-top:1rem;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.5rem;">HubSpot Trigger</div>
+          <p style="font-size:0.82rem;">At Day 60, HubSpot automatically emails the AE to begin the expansion process.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════
+       SLIDE 11 — OPERATING RULES
+  ═══════════════════════════════════════ -->
+  <section class="slide" id="s11">
+    <div class="slide-inner two-col" style="align-items:start;">
+      <div>
+        <div class="eyebrow">Slide 10 — How We Operate</div>
+        <h2>Key Operating<br>Rules</h2>
+
+        <ol class="rules-list">
+          <li>
+            <span class="rule-num">01</span>
+            <span><strong>AE = Quarterback</strong> — you own the client from close to expansion</span>
+          </li>
+          <li>
+            <span class="rule-num">02</span>
+            <span><strong>Product = Autonomous Operator</strong> — they can start, pause, scale without your approval; they cannot skip data deliverables</span>
+          </li>
+          <li>
+            <span class="rule-num">03</span>
+            <span><strong>Every meeting ends with the next meeting booked</strong></span>
+          </li>
+          <li>
+            <span class="rule-num">04</span>
+            <span><strong>Data is not siloed</strong> — you should always know the numbers before the client does</span>
+          </li>
+          <li>
+            <span class="rule-num">05</span>
+            <span>Expansion aligned by <strong>Day 60</strong>, proposal reviewed by <strong>Day 75</strong>, decision by <strong>Day 90</strong></span>
+          </li>
+          <li>
+            <span class="rule-num">06</span>
+            <span>If Product flags a campaign issue → they optimize first → notify you → <strong>you decide</strong> if client needs to hear it</span>
+          </li>
+        </ol>
+      </div>
+
+      <div>
+        <h2 style="font-size:1.3rem;margin-bottom:1rem;">Escalation</h2>
+        <div class="esc-grid">
+          <div class="esc-item">
+            <div class="esc-trigger">Campaign underperforming</div>
+            <div class="esc-divider"></div>
+            <div class="esc-action">Product adjusts → notifies AE + Success → AE decides client comms</div>
+          </div>
+          <div class="esc-item">
+            <div class="esc-trigger">Expansion at risk (Day 60+)</div>
+            <div class="esc-divider"></div>
+            <div class="esc-action">Product provides data → AE owns convo → leadership escalation if needed</div>
+          </div>
+          <div class="esc-item">
+            <div class="esc-trigger">Pre-launch stalled</div>
+            <div class="esc-divider"></div>
+            <div class="esc-action">AE escalates immediately — every day late is a day lost</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════
+       SLIDE 12 — QUICK REFERENCE
+  ═══════════════════════════════════════ -->
+  <section class="slide" id="s12">
+    <div class="slide-inner">
+      <div class="eyebrow" style="text-align:center;">Slide 11 — Quick Reference</div>
+      <h2 style="text-align:center;margin-bottom:1.8rem;">Everything You Need<br>at a Glance</h2>
+
+      <div class="qr-grid" style="max-width:700px;margin:0 auto;">
+        <div class="qr-item">
+          <span class="qr-label">Pilot Price</span>
+          <span class="qr-value big">$5,000/mo × 3 = $15K</span>
+        </div>
+        <div class="qr-item">
+          <span class="qr-label">30-Day Benchmark</span>
+          <span class="qr-value big">$100K donor revenue</span>
+        </div>
+        <div class="qr-item">
+          <span class="qr-label">Target Launch Window</span>
+          <span class="qr-value">Day 21 &nbsp;·&nbsp; Hard limit Day 28</span>
+        </div>
+        <div class="qr-item">
+          <span class="qr-label">Expansion Trigger (HubSpot)</span>
+          <span class="qr-value">Day 60 — email sent to AE automatically</span>
+        </div>
+        <div class="qr-item">
+          <span class="qr-label">Pipeline — SF Only</span>
+          <span class="qr-value sky">Pilot Pipeline</span>
+        </div>
+        <div class="qr-item">
+          <span class="qr-label">Pipeline — SF + Other Products</span>
+          <span class="qr-value" style="color:var(--gold);">Ministry SaaS Pipeline</span>
+        </div>
+        <div class="qr-item" style="grid-column:1/-1;">
+          <span class="qr-label">Jack Graham Model</span>
+          <span class="qr-value">4K+ emails · 50+ subs in 30 days → ~$250K annual contract</span>
+        </div>
+      </div>
+
+      <div style="text-align:center;margin-top:2rem;">
+        <p style="font-size:0.78rem;color:var(--muted);">For the full process playbook, see the Leader Success documentation.&nbsp; For deal setup questions, contact Nay.</p>
+      </div>
+    </div>
+  </section>
+
+</div><!-- /deck -->
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const totalSlides = slides.length;
+  let current = 0;
+
+  const progressBar = document.getElementById('progress');
+  const dotsContainer = document.getElementById('dots');
+  const slideNum = document.getElementById('slide-num');
+
+  // Build dots
+  slides.forEach((_, i) => {
+    const dot = document.createElement('div');
+    dot.classList.add('dot');
+    if (i === 0) dot.classList.add('active');
+    dot.addEventListener('click', () => goTo(i));
+    dotsContainer.appendChild(dot);
+  });
+
+  function goTo(n) {
+    slides[current].classList.remove('active');
+    document.querySelectorAll('.dot')[current].classList.remove('active');
+    current = Math.max(0, Math.min(n, totalSlides - 1));
+    slides[current].classList.add('active');
+    document.querySelectorAll('.dot')[current].classList.add('active');
+    progressBar.style.width = ((current + 1) / totalSlides * 100) + '%';
+    slideNum.textContent = (current + 1) + ' / ' + totalSlides;
+  }
+
+  // Init
+  goTo(0);
+
+  document.getElementById('prev').addEventListener('click', () => goTo(current - 1));
+  document.getElementById('next').addEventListener('click', () => goTo(current + 1));
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ')  { e.preventDefault(); goTo(current + 1); }
+    if (e.key === 'ArrowLeft')                    { e.preventDefault(); goTo(current - 1); }
+    if (e.key === 'Home')                         { e.preventDefault(); goTo(0); }
+    if (e.key === 'End')                          { e.preventDefault(); goTo(totalSlides - 1); }
+  });
+</script>
+</body>
+</html>
